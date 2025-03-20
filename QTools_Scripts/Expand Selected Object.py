@@ -43,7 +43,6 @@ def move_objects_side_by_side(padding=1):
         return
 
     # Move objects to ground and rotate them for correct alignment first
-
     move_objects_to_ground()
     rotate_object_for_largest_side()
 
@@ -66,9 +65,17 @@ def move_objects_side_by_side(padding=1):
         x_max = max(corner.x for corner in bbox_corners)
         width = x_max - x_min
 
-        # Align based on bounding box instead of object origin
+        # Get object center on Y-axis
+        y_min = min(corner.y for corner in bbox_corners)
+        y_max = max(corner.y for corner in bbox_corners)
+        bbox_center_y = (y_max + y_min) / 2
+
+        # Align object X position
         bbox_center_x = (x_max + x_min) / 2
         obj.location.x = current_x + (width / 2) - bbox_center_x
+
+        # Align object Y position to the center (Y=0)
+        obj.location.y += -bbox_center_y
 
         # Update position for next object
         current_x += width + padding

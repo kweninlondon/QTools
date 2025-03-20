@@ -3,6 +3,19 @@ import math
 import mathutils
 
 
+def reset_object_transforms():
+    """Resets location, rotation, and scale of all selected objects."""
+    for obj in bpy.context.selected_objects:
+        if obj.type == 'MESH':  # Only reset transformations for mesh objects
+            obj.location = (0, 0, 0)
+            obj.rotation_euler = (0, 0, 0)
+            # obj.scale = (1, 1, 1)
+
+    bpy.context.view_layer.update()  # Apply changes before further operations
+
+# Run reset function at the start
+reset_object_transforms()
+
 def move_objects_to_ground():
     """Moves all selected objects so their lowest bounding box point aligns with Z=0."""
     for obj in bpy.context.selected_objects:
@@ -36,7 +49,13 @@ def rotate_object_for_largest_side():
             if depth_y > width_x:
                 obj.rotation_euler.z += math.radians(90)
 
-def move_objects_side_by_side(padding=1):
+def move_objects_side_by_side(padding=1, sort_by_size=True):
+    """Moves objects into a straight line along the X-axis, ensuring no overlaps and applying padding.
+
+    Parameters:
+    - padding (float): Space between objects.
+    - sort_by_size (bool): If True, sorts objects from largest to smallest before aligning.
+    """
     objects = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
 
     if not objects:
@@ -49,8 +68,18 @@ def move_objects_side_by_side(padding=1):
     # Ensure transformations are applied before sorting
     bpy.context.view_layer.update()
 
-    # Sort objects by their current X position after processing
-    objects.sort(key=lambda obj: obj.location.x)
+    # Sort objects by size if enabled, otherwise keep default position sorting
+    if sort_by_size:
+        def get_object_width(obj):
+            world_matrix = obj.matrix_world
+            bbox_corners = [world_matrix @ mathutils.Vector(corner) for corner in obj.bound_box]
+            x_min = min(corner.x for corner in bbox_corners)
+            x_max = max(corner.x for corner in bbox_corners)
+            return x_max - x_min  # Width of the object
+
+        objects.sort(key=get_object_width, reverse=True)  # Sort from largest to smallest
+    else:
+        objects.sort(key=lambda obj: obj.location.x)
 
     current_x = 0  # Start position on X-axis
 

@@ -14,7 +14,7 @@ def change_texture_paths(new_texture_folder):
     sys.stdout.flush()
 
     updated = False  # Track if any textures were updated
-    broken_only = True
+    broken_only = False
     for image in bpy.data.images:
         if image.filepath:
             abs_path = bpy.path.abspath(image.filepath)  # Get absolute path

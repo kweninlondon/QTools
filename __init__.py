@@ -70,6 +70,7 @@ class QTOOLS_PT_main_panel(bpy.types.Panel):
                 op = layout.operator("qtools.run_script", text=script)
                 op.script_name = script
 
+
 class QTOOLS_OT_RunScript(bpy.types.Operator):
     """Operator to execute a script"""
     bl_idname = "qtools.run_script"
@@ -118,7 +119,9 @@ class QTOOLS_OT_RunTextureScript(bpy.types.Operator):
             return {'CANCELLED'}
 
         try:
-            exec(compile(open(script_path).read(), script_path, 'exec'), globals(), locals())
+            script_globals = {"__name__": "__main__", "new_texture_folder": texture_path}  # Pass texture path
+            with open(script_path) as file:
+                exec(compile(file.read(), script_path, 'exec'), script_globals)
             self.report({'INFO'}, f"Executed: {self.script_name} with path: {texture_path}")
         except Exception as e:
             self.report({'ERROR'}, f"Failed: {self.script_name} - {e}")

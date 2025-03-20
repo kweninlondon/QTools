@@ -1,66 +1,51 @@
-import bpy
-import math
-import mathutils
-
-
-def move_objects_to_ground(obj):
-    """Moves an object so its lowest bounding box point aligns with Z=0."""
-    world_matrix = obj.matrix_world
-    bbox_corners = [world_matrix @ mathutils.Vector(corner) for corner in obj.bound_box]
-    min_z = min(corner.z for corner in bbox_corners)
-    obj.location.z += -min_z
-
-
-def rotate_object_for_largest_side(obj):
-    """Rotates the object so its longest side aligns with the X-axis."""
-    world_matrix = obj.matrix_world
-    bbox_corners = [world_matrix @ mathutils.Vector(corner) for corner in obj.bound_box]
-
-    # Calculate dimensions
-    x_min = min(corner.x for corner in bbox_corners)
-    x_max = max(corner.x for corner in bbox_corners)
-    y_min = min(corner.y for corner in bbox_corners)
-    y_max = max(corner.y for corner in bbox_corners)
-
-    width_x = x_max - x_min
-    depth_y = y_max - y_min
-
-    # If the Y dimension is larger, rotate 90 degrees around Z
-    if depth_y > width_x:
-        obj.rotation_euler.z += math.radians(90)
-
-
-def move_objects_side_by_side(padding=1):  # Default padding value of 0.1 units
+def move_objects_in_grid(padding=1):
+    """Arranges objects into a grid layout using a structured step-by-step approach."""
     objects = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
 
     if not objects:
+        print("No objects selected.")
         return
 
-    # Move objects to ground and rotate them for correct alignment
-    for obj in objects:
-        move_objects_to_ground(obj)
-        rotate_object_for_largest_side(obj)
+    print(f"Total objects: {len(objects)}")
 
-    # Sort objects by their current X position
-    objects.sort(key=lambda obj: obj.location.x)
+    # First, arrange objects in a line
+    move_objects_side_by_side(padding)
 
-    current_x = 0  # Start position on X-axis
+    # Step 1: Get total line length
+    total_length = max(obj.location.x + max((obj.matrix_world @ mathutils.Vector(corner)).x for corner in obj.bound_box)
+                       for obj in objects)
 
-    for obj in objects:
-        # Get bounding box in world space (considering rotation)
-        world_matrix = obj.matrix_world
-        bbox_corners = [world_matrix @ mathutils.Vector(corner) for corner in obj.bound_box]
+    # Step 2: Determine grid width (divide total length by 4)
+    grid_width = total_length / 4
+    print(f"Calculated Grid Width: {grid_width}")
 
-        # Get object width from transformed bounding box
-        x_min = min(corner.x for corner in bbox_corners)
-        x_max = max(corner.x for corner in bbox_corners)
-        width = x_max - x_min
+    # Step 3: Get bounding box height of the full line
+    min_z = min(min((obj.matrix_world @ mathutils.Vector(corner)).z for corner in obj.bound_box) for obj in objects)
+    max_z = max(max((obj.matrix_world @ mathutils.Vector(corner)).z for corner in obj.bound_box) for obj in objects)
+    line_height = max_z - min_z
+    print(f"Calculated Line Height: {line_height}")
 
-        # Align based on bounding box instead of object origin
-        bbox_center_x = (x_max + x_min) / 2
-        obj.location.x += -bbox_center_x + current_x + (width / 2)
+    current_z_offset = 0  # Track the Z level for stacking
 
-        # Update position for next object with padding
-        current_x += width + padding
+    while True:
+        # Step 4: Select objects beyond the grid width on X-axis
+        objects_to_move = [obj for obj in objects if obj.location.x > grid_width]
 
-move_objects_side_by_side()
+        if not objects_to_move:
+            break  # Exit when no more objects exceed the grid width
+
+        print(f"Moving {len(objects_to_move)} objects to new row at Z offset: {current_z_offset + line_height + padding}")
+
+        # Step 5: Move selected objects upward in Z
+        for obj in objects_to_move:
+            obj.location.z += line_height + padding
+
+        # Step 6: Align objects' left edge with X origin
+        min_x = min(obj.location.x for obj in objects_to_move)
+        for obj in objects_to_move:
+            obj.location.x -= min_x  # Align to X=0
+
+        # Update Z offset for the next row
+        current_z_offset += line_height + padding
+
+move_objects_in_grid()

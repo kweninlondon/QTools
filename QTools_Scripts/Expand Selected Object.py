@@ -82,6 +82,14 @@ def move_objects_side_by_side(padding=1):
 
 move_objects_side_by_side()
 
+import math
+
+def estimate_grid_size(total_length, row_height):
+    """Estimates an optimal grid width using both line length and row height."""
+    estimated_size = math.sqrt(total_length * row_height)  # Balance width and height
+    print(f"Estimated Grid Width: {estimated_size}")
+    return estimated_size
+
 def move_objects_in_grid(padding=1):
     """Arranges objects into a square-like grid layout after they are aligned in a row."""
     objects = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
@@ -95,15 +103,14 @@ def move_objects_in_grid(padding=1):
     total_length = x_max - x_min  # Correct total length
     print(f"Corrected Total Line Length: {total_length} meters")
 
-    # Step 2: Determine grid width (divide total length by 4)
-    grid_width = total_length / 4
-    print(f"Calculated Grid Width: {grid_width}")
-
-    # Step 3: Get bounding box height of the first row
+    # Step 2: Get bounding box height of the first row
     min_z = min(min((obj.matrix_world @ mathutils.Vector(corner)).z for corner in obj.bound_box) for obj in objects)
     max_z = max(max((obj.matrix_world @ mathutils.Vector(corner)).z for corner in obj.bound_box) for obj in objects)
     row_height = max_z - min_z
     print(f"Calculated Row Height: {row_height}")
+
+    # Step 3: Estimate grid width using new function
+    grid_width = estimate_grid_size(total_length, row_height)
 
     current_z_offset = 0  # Track the Z level for stacking
 
